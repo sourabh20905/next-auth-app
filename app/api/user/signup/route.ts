@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import User from "@/src/models/userModal";
 import { connection } from "@/src/dbConfig/dbConfig";
+import { sendMail } from "@/src/utils/mailer";
 
 connection();
 
@@ -26,6 +27,8 @@ export const Post = async (request: NextRequest) => {
     });
     const savedUser = await newUser.save();
     console.log(savedUser);
+
+    await sendMail({ email, emailType: "Verify", userId: savedUser._id });
 
     //send email need to work
   } catch (err: unknown) {

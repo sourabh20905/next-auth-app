@@ -1,4 +1,6 @@
 import nodemailer from "nodemailer";
+import User from "../models/userModal";
+import bcrypt from "bcryptjs";
 
 interface sendMailParams {
   email: string;
@@ -12,6 +14,20 @@ export const sendMail = async ({
   userId,
 }: sendMailParams) => {
   try {
+    const hashedToken = bcrypt.hashSync(userId.toString(), 10);
+
+    if (emailType === "Verify") {
+      await User.findByIdAndUpdate(email, {
+        verifyToken: hashedToken,
+        verifyTokenExpiry: Date.now() + 3600000,
+      });
+    } else if (emailType === "Reset") {
+      await User.findByIdAndUpdate(email, {
+        forgotPasswordToken: hashedToken,
+        forgotPasswordTokenExpiry: Date.now() + 3600000,
+      });
+    }
+
     const transporter = nodemailer.createTransport({
       host: "smtp.ethereal.email",
       port: 587,
