@@ -1,57 +1,53 @@
 import nodemailer from "nodemailer";
-import User from "../models/userModal";
 import bcrypt from "bcryptjs";
-
-interface sendMailParams {
-  email: string;
-  emailType: string;
-  userId: string;
-}
+import User from "../models/userModal";
 
 export const sendMail = async ({
   email,
   emailType,
   userId,
-}: sendMailParams) => {
-  try {
-    const hashedToken = bcrypt.hashSync(userId.toString(), 10);
+}: {
+  email: string;
+  emailType: "Verify" | "Reset";
+  userId: string;
+}) => {
+  const hashedToken = bcrypt.hashSync(userId, 10);
 
-    if (emailType === "Verify") {
-      await User.findByIdAndUpdate(email, {
+  if (emailType === "Verify") {
+    await User.findOneAndUpdate(
+      { email },
+      {
         verifyToken: hashedToken,
         verifyTokenExpiry: Date.now() + 3600000,
-      });
-    } else if (emailType === "Reset") {
-      await User.findByIdAndUpdate(email, {
+      }
+    );
+  } else {
+    await User.findOneAndUpdate(
+      { email },
+      {
         forgotPasswordToken: hashedToken,
         forgotPasswordTokenExpiry: Date.now() + 3600000,
-      });
-    }
-
-    const transporter = nodemailer.createTransport({
-      host: "smtp.ethereal.email",
-      port: 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: "maddison53@ethereal.email",
-        pass: "jn7jnAPss4f63QBp6D",
-      },
-    });
-
-    const mailOptions = {
-      from: "sourabh20905@gmail.com",
-      to: email,
-      subject: emailType === "Verify" ? "Verify" : "Reset Password",
-      text: "Hello world?", // plain‑text body
-      html: "<b>Hello world?</b>", // HTML body
-    };
-
-    const mailResponse = await transporter.sendMail({
-      ...mailOptions,
-    });
-    return mailResponse;
-  } catch (err: unknown) {
-    if (err instanceof Error) throw new Error(err.message);
-    throw new Error("Something went wrong in nodemailer");
+      }
+    );
   }
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.ethereal.email",
+    port: 587,
+    auth: {
+      user: "herman.wiegand@ethereal.email",
+      pass: "FsmzhHUjhC8f8ZF944",
+    },
+  });
+
+  const info = await transporter.sendMail({
+    from: '"Auth App" <no-reply@authapp.com>',
+    to: email,
+    subject: emailType === "Verify" ? "Verify Email" : "Reset Password",
+    html: `<p>Token: <b>${hashedToken}</b></p>`,
+  });
+
+  console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+
+  return info;
 };
